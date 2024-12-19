@@ -11,7 +11,6 @@ Este projeto simula o processo de encomenda e produção de chapas galvanizadas 
 - **Node.js**: Ambiente de execução para o JavaScript no backend.
 - **JSON**: Persistência dos dados utilizando arquivos JSON.
 - **JWT (JSON Web Token)**: Sistema de autenticação baseado em token.
-- **Bcrypt**: Criptografia de senhas. (***TALVEZ FUTURAMENTE***)
 
 ## Funcionalidades
 
