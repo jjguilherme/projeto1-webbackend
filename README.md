@@ -1,7 +1,9 @@
-# projeto1-webbackend
+# PROJETO PROGRAMAÇÃO WEB BACK-END
+# ALUNO: JOAO GUILHERME DE SOUZA / RA:2479516
 # Sistema de Gestão de Produção de Chapas Galvanizadas
 
 Este projeto simula o processo de encomenda e produção de chapas galvanizadas e outros produtos relacionados à fabricação de calhas. O sistema é baseado em uma API REST que permite a interação entre diferentes usuários (clientes e administradores), com funcionalidades como criação de pedidos, gerenciamento de produtos, cálculo de tempo de produção, e geração de relatórios.
+
 
 ## Tecnologias Utilizadas
 
