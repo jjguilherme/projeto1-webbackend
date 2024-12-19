@@ -1,0 +1,22 @@
+[
+  {
+    "id": "f1a8a90c-894f-4745-9d3f-96a5dbe4a7b9",
+    "role": "user",
+    "createdAt": "2024-12-19T14:47:10.201Z"
+  },
+  {
+    "id": "1ae15d3d-6f5b-4f85-a089-204f718207fc",
+    "fullName": "João Guilherme",
+    "email": "joao.guilherme@gmail.com",
+    "password": "senha123",
+    "role": "user",
+    "createdAt": "2024-12-19T16:21:01.292Z"
+  },
+  {
+    "id": "53e85d62-1daf-40cf-866c-c655700665a6",
+    "email": "joao@example.com",
+    "password": "senha123",
+    "role": "user",
+    "createdAt": "2024-12-19T18:19:53.943Z"
+  }
+]
