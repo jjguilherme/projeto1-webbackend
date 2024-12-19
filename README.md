@@ -9,7 +9,7 @@ Este projeto simula o processo de encomenda e produção de chapas galvanizadas 
 - **Node.js**: Ambiente de execução para o JavaScript no backend.
 - **JSON**: Persistência dos dados utilizando arquivos JSON.
 - **JWT (JSON Web Token)**: Sistema de autenticação baseado em token.
-- **Bcrypt**: Criptografia de senhas.
+- **Bcrypt**: Criptografia de senhas. (***TALVEZ FUTURAMENTE***)
 
 ## Funcionalidades
 
@@ -58,7 +58,7 @@ Quando o status de um pedido é alterado, o cliente é notificado com uma mensag
 
 ### Sistema de Autenticação
 
-- **Cadastro de Usuários**: Permite que os usuários se registrem com nome, e-mail, senha (criptografada) e tipo de usuário.
+- **Cadastro de Usuários**: Permite que os usuários se registrem com nome, e-mail, senha e tipo de usuário.
 - **Login**: Geração de token JWT para autenticação de usuários.
 - **Permissões**: Usuários comuns podem consultar e criar pedidos, enquanto administradores têm permissões avançadas para gerenciar produtos, pedidos e usuários.
 

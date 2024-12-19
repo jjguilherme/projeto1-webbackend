@@ -117,7 +117,7 @@ class Product {
       aluminio: 1.5,
       aço: 1.2,
       galvanizado:1.0,
-      pvc: 1.0
+      pvc: 0.8
     };
 
     const dimensions = product.dimensions.match(/\d+/g).map(Number); // Extrai números das dimensões
