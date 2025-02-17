@@ -1,6 +1,6 @@
 const express = require('express');
-const { Order } = require('../models/Order');
-const { Product } = require('../models/Product');
+const { Order } = require('../models/Order'); // Supondo que o modelo Order seja atualizado para MongoDB
+const { Product } = require('../models/Product'); // Supondo que o modelo Product seja atualizado para MongoDB
 const { auth, isAdmin } = require('../middleware/auth');
 const { query } = require('express-validator');
 const validate = require('../middleware/validate');
@@ -87,8 +87,7 @@ router.get(
       if (endDate) filters.createdAt = { $lte: new Date(endDate) };
 
       // Buscar pedidos com base nos filtros
-      const orderModel = new Order();
-      const orders = await orderModel.getAll(filters);
+      const orders = await Order.find(filters).populate('products.productId'); // Usando o populate para trazer os detalhes dos produtos relacionados ao pedido
 
       // Calculando total de pedidos e receita
       const totalOrders = orders.length;
@@ -99,13 +98,13 @@ router.get(
 
       for (const order of orders) {
         for (const product of order.products) {
-          const existingProduct = productsSold.find((p) => p.productId === product.productId);
+          const existingProduct = productsSold.find((p) => p.productId.toString() === product.productId.toString());
           if (existingProduct) {
             existingProduct.quantitySold += product.quantity;
           } else {
             productsSold.push({
               productId: product.productId,
-              productName: product.name,
+              productName: product.productName, // Supondo que o produto tenha o campo name ou similar
               quantitySold: product.quantity,
             });
           }

@@ -1,5 +1,5 @@
 const express = require('express');
-const { User } = require('../models/User');
+const { User } = require('../models/User');  // Certifique-se de que o modelo User é baseado no MongoDB
 const { auth, isAdmin } = require('../middleware/auth');
 const { body } = require('express-validator');
 const validate = require('../middleware/validate');
@@ -19,6 +19,22 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: Lista de usuários
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:
+ *                     type: string
+ *                     description: ID do usuário
+ *                   username:
+ *                     type: string
+ *                     description: Nome de usuário
+ *                   email:
+ *                     type: string
+ *                     description: E-mail do usuário
  *       401:
  *         description: Não autorizado, token JWT inválido ou ausente
  *       403:
@@ -28,8 +44,7 @@ const router = express.Router();
  */
 router.get('/', auth, isAdmin, async (req, res) => {
   try {
-    const userModel = new User();
-    const users = await userModel.getAll();
+    const users = await User.find();  // Usando o método find() do MongoDB
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -62,6 +77,20 @@ router.get('/', auth, isAdmin, async (req, res) => {
  *     responses:
  *       201:
  *         description: Usuário criado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   description: ID do usuário
+ *                 username:
+ *                   type: string
+ *                   description: Nome de usuário
+ *                 email:
+ *                   type: string
+ *                   description: E-mail do usuário
  *       400:
  *         description: Dados inválidos
  *       401:
@@ -83,9 +112,17 @@ router.post(
   ],
   async (req, res) => {
     try {
-      const userModel = new User();
-      const newUser = await userModel.create(req.body);
-      res.status(201).json(newUser);
+      const { username, email, password } = req.body;
+
+      // Criando um novo usuário no MongoDB
+      const newUser = new User({ username, email, password });
+      await newUser.save();  // Salvando no banco de dados MongoDB
+
+      res.status(201).json({
+        _id: newUser._id,
+        username: newUser.username,
+        email: newUser.email,
+      });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -123,11 +160,14 @@ router.post(
  */
 router.delete('/:id', auth, isAdmin, async (req, res) => {
   try {
-    const userModel = new User();
-    const deletedUser = await userModel.delete(req.params.id);
+    const userId = req.params.id;
+
+    // Usando o método findByIdAndDelete do MongoDB para excluir o usuário
+    const deletedUser = await User.findByIdAndDelete(userId);
     if (!deletedUser) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
+
     res.status(200).json({ message: 'Usuário excluído com sucesso' });
   } catch (error) {
     res.status(500).json({ error: error.message });

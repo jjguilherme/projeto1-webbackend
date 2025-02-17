@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editar Produto</title>
+</head>
+<body>
+  <h1>Editar Produto</h1>
+  <form action="/products/{{id}}" method="POST">
+    <input type="hidden" name="_method" value="PUT">
+    <label for="name">Nome</label>
+    <input type="text" id="name" name="name" value="{{name}}" required>
+    <label for="description">Descrição</label>
+    <input type="text" id="description" name="description" value="{{description}}" required>
+    <label for="price">Preço Unitário</label>
+    <input type="number" id="price" name="price" value="{{price}}" step="0.01" required>
+    <label for="stock">Estoque</label>
+    <input type="number" id="stock" name="stock" value="{{stock}}" required>
+    <button type="submit">Salvar Alterações</button>
+  </form>
+</body>
+</html>

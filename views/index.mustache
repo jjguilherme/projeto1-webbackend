@@ -1,0 +1,16 @@
+<!-- views/index.mustache -->
+{{! title: string, description: string, users: Array<User> }}
+<html>
+  <head>
+    <title>{{title}}</title>
+  </head>
+  <body>
+    <h1>{{description}}</h1>
+    <ul>
+      {{#users}}
+        <li>{{name}}, {{age}} anos</li>
+      {{/users}}
+    </ul>
+  </body>
+</html>
+

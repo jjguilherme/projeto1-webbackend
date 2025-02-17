@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastrar Usuário</title>
+</head>
+<body>
+  <h1>Cadastro de Usuário</h1>
+  <form action="/auth/register" method="POST">
+    <label for="name">Nome</label>
+    <input type="text" id="name" name="name" required>
+    <label for="email">E-mail</label>
+    <input type="email" id="email" name="email" required>
+    <label for="password">Senha</label>
+    <input type="password" id="password" name="password" required>
+    <label for="role">Tipo de Usuário</label>
+    <select name="role" id="role">
+      <option value="cliente">Cliente</option>
+      <option value="administrador">Administrador</option>
+    </select>
+    <button type="submit">Cadastrar</button>
+  </form>
+</body>
+</html>

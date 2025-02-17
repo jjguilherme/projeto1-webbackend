@@ -2,201 +2,144 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models/User');
 const { body, validationResult } = require('express-validator');
-const path = require('path');
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'Sua chave secreta';
+const JWT_SECRET = process.env.JWT_SECRET;
+const { authWeb, isAdminWeb } = require('../middleware/auth');
+const flash = require('connect-flash');
 
-
-// Validações para registro e login de usuário
+// Validações atualizadas para web e API
 const registerValidations = [
   body('email').isEmail().withMessage('E-mail inválido'),
-  body('password').isLength({ min: 6 }).withMessage('A senha deve ter pelo menos 6 caracteres'),
-  body('name').not().isEmpty().withMessage('O nome é obrigatório'),
+  body('password').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres'),
+  body('name').not().isEmpty().withMessage('Nome é obrigatório'),
 ];
 
 const loginValidations = [
   body('email').isEmail().withMessage('E-mail inválido'),
-  body('password').isLength({ min: 6 }).withMessage('A senha deve ter pelo menos 6 caracteres'),
+  body('password').not().isEmpty().withMessage('Senha é obrigatória'),
 ];
 
-// Middleware de validação de dados
+// Middleware de validação adaptado
 const validate = (req, res, next) => {
   const errors = validationResult(req);
+  
   if (!errors.isEmpty()) {
-    const error = new Error('Erro de validação');
-    error.statusCode = 400;
-    error.details = errors.array();
-    return next(error);
+    // Para API
+    if (req.originalUrl.startsWith('/api')) {
+      return res.status(400).json({
+        error: 'Erro de validação',
+        details: errors.array()
+      });
+    }
+    
+    // Para Web
+    req.flash('error', errors.array()[0].msg);
+    return res.redirect('back');
   }
+  
   next();
 };
 
-// Registro de novo usuário
-/**
- * @swagger
- * /api/auth/register:
- *   post:
- *     summary: Registra um novo usuário
- *     description: Registra um novo usuário no sistema.
- *     tags:
- *       - Autenticação
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *                 minLength: 6
- *               name:
- *                 type: string
- *     responses:
- *       201:
- *         description: Usuário criado com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 email:
- *                   type: string
- *                   format: email
- *                 name:
- *                   type: string
- *       400:
- *         description: Erro na criação do usuário
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- */
-router.post('/register', registerValidations, validate, async (req, res, next) => {
+// Rotas Web
+router.get('/login', (req, res) => {
+  if (req.session.user) return res.redirect('/');
+  res.render('auth/login', {
+    title: 'Login',
+    messages: req.flash()
+  });
+});
+
+router.get('/register', isAdminWeb, (req, res) => {
+  res.render('auth/register', {
+    title: 'Registrar Usuário',
+    messages: req.flash()
+  });
+});
+
+// Login Web
+router.post('/login', loginValidations, validate, async (req, res) => {
   try {
-    const user = new User();
-    const userData = await user.register(req.body);
+    const user = await User.findOne({ email: req.body.email });
+    
+    if (!user || !(await user.comparePassword(req.body.password))) {
+      req.flash('error', 'Credenciais inválidas');
+      return res.redirect('/login');
+    }
+
+    req.session.user = {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      admin: user.isAdmin
+    };
+
+    res.redirect(user.isAdmin ? '/admin/dashboard' : '/');
+    
+  } catch (error) {
+    req.flash('error', 'Erro no login');
+    res.redirect('/login');
+  }
+});
+
+// Registro Web (apenas admin)
+router.post('/register', isAdminWeb, registerValidations, validate, async (req, res) => {
+  try {
+    const user = new User({
+      ...req.body,
+      isAdmin: req.body.isAdmin ? true : false
+    });
+    
+    await user.save();
+    req.flash('success', 'Usuário criado com sucesso');
+    res.redirect('/admin/usuarios');
+    
+  } catch (error) {
+    req.flash('error', 'Erro ao criar usuário');
+    res.redirect('/register');
+  }
+});
+
+// Logout
+router.get('/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/login');
+});
+
+// Rotas API (mantidas)
+router.post('/api/register', registerValidations, validate, async (req, res, next) => {
+  try {
+    const user = new User(req.body);
+    await user.save();
     res.status(201).json({
-      email: userData.email,
-      name: userData.name
+      email: user.email,
+      name: user.name
     });
   } catch (error) {
     next(error);
   }
 });
 
-// Login do usuário
-/**
- * @swagger
- * /api/auth/login:
- *   post:
- *     summary: Realiza o login de um usuário
- *     description: Realiza o login e retorna um token JWT para autenticação.
- *     tags:
- *       - Autenticação
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *                 minLength: 6
- *     responses:
- *       200:
- *         description: Login bem-sucedido com o retorno do token JWT
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user:
- *                   type: object
- *                   properties:
- *                     email:
- *                       type: string
- *                       format: email
- *                     name:
- *                       type: string
- *                 token:
- *                   type: string
- *       401:
- *         description: Credenciais inválidas
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- */
-router.post('/login', loginValidations, validate, async (req, res, next) => {
+router.post('/api/login', loginValidations, validate, async (req, res, next) => {
   try {
-    const user = new User();
-    const userData = await user.login(req.body.email, req.body.password);
-    const token = jwt.sign({ id: userData._id }, JWT_SECRET, { expiresIn: '24h' });
+    const user = await User.findOne({ email: req.body.email });
+    
+    if (!user || !(await user.comparePassword(req.body.password))) {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '24h' });
     res.json({
       user: {
-        email: userData.email,
-        name: userData.name
+        email: user.email,
+        name: user.name,
+        admin: user.isAdmin
       },
       token
     });
+    
   } catch (error) {
     next(error);
   }
 });
 
-// Criar um usuário administrador (somente via GET para fins de instalação)
-router.get('/install', async (req, res, next) => {
-  try {
-    // Verifica se já existe um administrador
-    const existingAdmin = await User.findOne({ where: { isAdmin: true } });
-    if (existingAdmin) {
-      return res.status(200).json({ message: 'Usuário administrador já existe.' });
-    }
-
-    // Cria um novo usuário administrador
-    const adminData = {
-      email: 'admin@admin.com',
-      password: 'admin123', 
-      name: 'Administrador',
-    };
-
-    const user = new User();
-    await user.register(adminData); 
-
-    res.status(201).json({ message: 'Usuário administrador criado com sucesso.' });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Documentação Swagger
-/**
- * @swagger
- * /api/docs:
- *   get:
- *     summary: Acessa a documentação da API
- *     description: Acessa a documentação da API gerada pelo Swagger.
- *     responses:
- *       200:
- *         description: Documentação da API
- */
-router.get('/docs', (req, res) => {
-  res.sendFile(path.join(__dirname, 'swagger.html')); 
-});
-
-// Exporta o router para ser utilizado no app
 module.exports = router;

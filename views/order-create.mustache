@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar Pedido</title>
+</head>
+<body>
+  <h1>Criar Novo Pedido</h1>
+  <form action="/orders" method="POST">
+    <label for="product">Produto</label>
+    <select name="product" id="product">
+      {{#products}}
+        <option value="{{id}}">{{name}} - R$ {{price}}</option>
+      {{/products}}
+    </select>
+    <label for="quantity">Quantidade</label>
+    <input type="number" id="quantity" name="quantity" required min="1">
+    <button type="submit">Criar Pedido</button>
+  </form>
+</body>
+</html>
+

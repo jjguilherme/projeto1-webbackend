@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meus Pedidos</title>
+</head>
+<body>
+  <h1>Meus Pedidos</h1>
+  <ul>
+    {{#orders}}
+      <li>
+        <p>ID: {{id}} - Status: {{status}} - Total: R$ {{total}}</p>
+        {{#isAdmin}}
+          <a href="/orders/{{id}}/edit">Alterar Status</a>
+        {{/isAdmin}}
+      </li>
+    {{/orders}}
+  </ul>
+  {{#isCustomer}}
+    <a href="/orders/create">Criar Novo Pedido</a>
+  {{/isCustomer}}
+</body>
+</html>

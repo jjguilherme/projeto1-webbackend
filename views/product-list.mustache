@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Produtos</title>
+</head>
+<body>
+  <h1>Produtos Disponíveis</h1>
+  <ul>
+    {{#products}}
+      <li>
+        <h3>{{name}}</h3>
+        <p>{{description}}</p>
+        <p>Preço: R$ {{price}}</p>
+        <p>Estoque: {{stock}}</p>
+        {{#isAdmin}}
+          <a href="/products/edit/{{id}}">Editar</a> |
+          <a href="/products/delete/{{id}}">Excluir</a>
+        {{/isAdmin}}
+      </li>
+    {{/products}}
+  </ul>
+  {{#isAdmin}}
+    <a href="/products/create">Criar Novo Produto</a>
+  {{/isAdmin}}
+</body>
+</html>

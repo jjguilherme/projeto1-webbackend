@@ -1,44 +1,49 @@
+const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
-const FileOperations = require('../utils/fileOperations');
 const Product = require('./Product');
 
-class Order {
-  constructor() {
-    this.fileOps = new FileOperations('orders.json');
-    this.productModel = new Product();
-  }
+const orderSchema = new mongoose.Schema({
+  id: { type: String, default: uuidv4 },
+  customerId: { type: String, required: true },
+  products: [
+    {
+      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+      quantity: { type: Number, required: true },
+    },
+  ],
+  status: { type: String, enum: ['pendente', 'em produção', 'concluído', 'cancelado'], default: 'pendente' },
+  orderDate: { type: Date, default: Date.now },
+  estimatedProductionTime: { type: Number, required: true },
+  total: { type: Number, required: true },
+}, { timestamps: true });
 
-  // Criar novo pedido com cálculo de produção e validação de disponibilidade
+const OrderModel = mongoose.model('Order', orderSchema);
+
+class Order {
+  // Criar novo pedido
   async create(orderData) {
-    // Validações básicas
     if (!orderData.customerId || !orderData.products || orderData.products.length === 0) {
       throw new Error('Os campos customerId e products são obrigatórios.');
     }
 
-    // Validar disponibilidade de estoque
     await this.validateStock(orderData.products);
+    const estimatedProductionTime = await this.calculateProductionTime(orderData.products);
+    const total = await this.calculateTotal(orderData.products);
 
-    const newOrder = {
-      id: uuidv4(),
+    const newOrder = new OrderModel({
       customerId: orderData.customerId,
       products: orderData.products,
-      status: 'pendente',
-      orderDate: new Date().toISOString(),
-      estimatedProductionTime: await this.calculateProductionTime(orderData.products),
-      total: await this.calculateTotal(orderData.products),
-      createdAt: new Date().toISOString(),
-    };
+      estimatedProductionTime,
+      total,
+    });
 
-    // Atualizar estoque dos produtos
     await this.updateStockAfterOrder(orderData.products);
-
-    return this.fileOps.create(newOrder);
+    return newOrder.save();
   }
 
-  // Validar disponibilidade de estoque
   async validateStock(products) {
     for (const item of products) {
-      const product = await this.productModel.getById(item.productId);
+      const product = await Product.findById(item.productId);
       if (!product) throw new Error(`Produto ${item.productId} não encontrado.`);
       if (product.stock < item.quantity) {
         throw new Error(`Estoque insuficiente para o produto ${product.name}.`);
@@ -46,115 +51,73 @@ class Order {
     }
   }
 
-  // Atualizar estoque após criação do pedido
   async updateStockAfterOrder(products) {
     for (const item of products) {
-      await this.productModel.updateStock(item.productId, -item.quantity);
+      await Product.findByIdAndUpdate(item.productId, { $inc: { stock: -item.quantity } });
     }
   }
 
-  // Calcular tempo de produção com base em material e dimensões
   async calculateProductionTime(products) {
-    const PRODUCTION_TIME_BASE = 10; // minutos base por produto
-    const MULTIPLIER_BY_MATERIAL = {
-      aço: 1.2,
-      alumínio: 1,
-      galvanizado: 1.5,
-    };
-
+    const PRODUCTION_TIME_BASE = 10;
+    const MULTIPLIER_BY_MATERIAL = { aço: 1.2, alumínio: 1, galvanizado: 1.5 };
     let totalProductionTime = 0;
+    
     for (const item of products) {
-      const product = await this.productModel.getById(item.productId);
+      const product = await Product.findById(item.productId);
       const materialMultiplier = MULTIPLIER_BY_MATERIAL[product.material] || 1;
       const area = product.dimensions.width * product.dimensions.length;
       totalProductionTime += PRODUCTION_TIME_BASE * materialMultiplier * area * item.quantity;
     }
-
     return totalProductionTime;
   }
 
-  // Calcular o total do pedido
   async calculateTotal(products) {
     let total = 0;
     for (const item of products) {
-      const product = await this.productModel.getById(item.productId);
-      if (!product) throw new Error(`Produto ${item.productId} não encontrado.`);
+      const product = await Product.findById(item.productId);
       total += product.unitPrice * item.quantity;
     }
     return total;
   }
 
-  // Obter todos os pedidos com paginação
   async getAll(page = 1, limit = 10) {
-    const orders = await this.fileOps.readFile();
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-
-    return {
-      data: orders.slice(startIndex, endIndex),
-      total: orders.length,
-      page,
-      totalPages: Math.ceil(orders.length / limit),
-    };
+    const orders = await OrderModel.find()
+      .skip((page - 1) * limit)
+      .limit(limit);
+    const total = await OrderModel.countDocuments();
+    return { data: orders, total, page, totalPages: Math.ceil(total / limit) };
   }
 
-  // Obter pedido por ID
   async getById(id) {
-    return this.fileOps.findById(id);
+    return OrderModel.findById(id);
   }
 
-  // Atualizar status do pedido
   async updateStatus(id, status) {
-    const validStatuses = ['pendente', 'em produção', 'concluído', 'cancelado'];
-    if (!validStatuses.includes(status)) {
-      throw new Error('Status inválido. Use: pendente, em produção, concluído, cancelado.');
+    if (!['pendente', 'em produção', 'concluído', 'cancelado'].includes(status)) {
+      throw new Error('Status inválido.');
     }
-
-    return this.fileOps.update(id, {
-      status,
-      updatedAt: new Date().toISOString(),
-    });
+    return OrderModel.findByIdAndUpdate(id, { status }, { new: true });
   }
 
-  // Deletar pedido
   async delete(id) {
-    const order = await this.fileOps.findById(id);
+    const order = await OrderModel.findById(id);
     if (!order) throw new Error('Pedido não encontrado.');
-
-    // Reverter estoque dos produtos
     for (const item of order.products) {
-      await this.productModel.updateStock(item.productId, item.quantity);
+      await Product.findByIdAndUpdate(item.productId, { $inc: { stock: item.quantity } });
     }
-
-    return this.fileOps.delete(id);
+    return OrderModel.findByIdAndDelete(id);
   }
 
-  // Gerar relatório de pedidos concluídos
   async generateReport(startDate, endDate) {
-    const orders = await this.fileOps.readFile();
-
-    const completedOrders = orders.filter(
-      (order) =>
-        order.status === 'concluído' &&
-        order.orderDate >= startDate &&
-        order.orderDate <= endDate
-    );
-
+    const orders = await OrderModel.find({ status: 'concluído', orderDate: { $gte: startDate, $lte: endDate } });
+    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
     return {
-      totalOrders: completedOrders.length,
-      totalRevenue: completedOrders.reduce((sum, order) => sum + order.total, 0),
-      averageOrderValue:
-        completedOrders.length > 0
-          ? completedOrders.reduce((sum, order) => sum + order.total, 0) /
-            completedOrders.length
-          : 0,
-      averageProductionTime:
-        completedOrders.length > 0
-          ? completedOrders.reduce((sum, order) => sum + order.estimatedProductionTime, 0) /
-            completedOrders.length
-          : 0,
+      totalOrders: orders.length,
+      totalRevenue,
+      averageOrderValue: orders.length ? totalRevenue / orders.length : 0,
+      averageProductionTime: orders.length ? orders.reduce((sum, order) => sum + order.estimatedProductionTime, 0) / orders.length : 0,
     };
   }
 }
 
-module.exports = Order;
+module.exports = new Order();

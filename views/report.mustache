@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatórios</title>
+</head>
+<body>
+  <h1>Relatórios de Pedidos e Produção</h1>
+  <form action="/reports" method="GET">
+    <label for="startDate">Data Inicial</label>
+    <input type="date" id="startDate" name="startDate">
+    <label for="endDate">Data Final</label>
+    <input type="date" id="endDate" name="endDate">
+    <button type="submit">Gerar Relatório</button>
+  </form>
+  <div>
+    <h3>Pedidos Concluídos</h3>
+    <ul>
+      {{#completedOrders}}
+        <li>{{id}} - {{total}} - {{status}}</li>
+      {{/completedOrders}}
+    </ul>
+  </div>
+</body>
+</html>

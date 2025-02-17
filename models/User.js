@@ -1,55 +1,48 @@
+const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
-const FileOperations = require('../utils/fileOperations');
 
-class User {
-  constructor() {
-    this.fileOps = new FileOperations('users.json');
-  }
+const userSchema = new mongoose.Schema({
+  id: { type: String, default: uuidv4, unique: true },
+  fullName: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true }, // Armazena a senha diretamente 
+  role: { type: String, default: 'user' },
+  createdAt: { type: Date, default: Date.now }
+});
 
+const User = mongoose.model('User', userSchema);
+
+class UserService {
   async register(userData) {
-    const users = await this.fileOps.readFile();
+    const existingUser = await User.findOne({ email: userData.email });
+    if (existingUser) throw new Error('EMAIL JÁ REGISTRADO!!');
     
-    // Checa se o email já existe
-    if (users.some(user => user.email === userData.email)) {
-      throw new Error('EMAIL JÁ REGISTRADO!!');
-    }
-
-    const newUser = {
-      id: uuidv4(),
-      fullName: userData.fullName,
-      email: userData.email,
-      password: userData.password, // Armazena a senha diretamente
-      role: userData.role || 'user',
-      createdAt: new Date().toISOString()
-    };
-
-    await this.fileOps.create(newUser);
-    const { password, ...userWithoutPassword } = newUser;
+    const newUser = new User(userData);
+    await newUser.save();
+    
+    const { password, ...userWithoutPassword } = newUser.toObject();
     return userWithoutPassword;
   }
 
   async login(email, password) {
-    const users = await this.fileOps.readFile();
-    const user = users.find(u => u.email === email && u.password === password);
-
-    if (!user) {
-      throw new Error('Credenciais INVÁLIDAS');
-    }
-
-    const { password: _, ...userWithoutPassword } = user;
+    const user = await User.findOne({ email, password });
+    if (!user) throw new Error('Credenciais INVÁLIDAS');
+    
+    const { password: _, ...userWithoutPassword } = user.toObject();
     return userWithoutPassword;
   }
 
   async getById(id) {
-    const user = await this.fileOps.findById(id);
+    const user = await User.findOne({ id });
     if (!user) return null;
-    const { password, ...userWithoutPassword } = user;
+    
+    const { password, ...userWithoutPassword } = user.toObject();
     return userWithoutPassword;
   }
 
   async updateUser(id, updates) {
-    return this.fileOps.update(id, updates);
+    return User.findOneAndUpdate({ id }, updates, { new: true });
   }
 }
 
-module.exports = { User };  // Exportando a classe User
+module.exports = new UserService();
